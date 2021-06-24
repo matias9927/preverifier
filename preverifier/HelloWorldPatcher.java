@@ -58,7 +58,7 @@ import java.nio.file.FileSystems;
  * replacing all JSR and RET instructions with a valid equivalent
  */
 public class HelloWorldPatcher extends ClassVisitor {
-	
+
 	private static HashSet<String> targetMethods = new HashSet<String>(); // Set containing each method with the desired opcode
 	private static byte[] bytecode;
 	private static ClassNode cn;

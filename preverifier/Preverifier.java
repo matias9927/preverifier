@@ -58,7 +58,7 @@ import java.nio.file.FileSystems;
  * replacing all JSR and RET instructions with a valid equivalent
  */
 public class Preverifier extends ClassVisitor {
-	
+
 	private static HashSet<String> targetMethods = new HashSet<String>(); // Set containing each method with the desired opcode
 	private static byte[] bytecode;
 	private static ClassNode cn;
@@ -94,7 +94,6 @@ public class Preverifier extends ClassVisitor {
             throw new Error("Error reading file", e);
         }
         ClassWriter cw = new ClassWriter(cr, ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS);
-        //cn.accept(new InvokeDynamicPatcher(Opcodes.ASM5, cw), cr.EXPAND_FRAMES);
         cn.accept(cw);
         try {
             Files.write(filePath, cw.toByteArray(),
@@ -243,6 +242,9 @@ public class Preverifier extends ClassVisitor {
 					else if (inList.get(i).getOpcode() == Opcodes.RET) {
 						System.out.println("Replacing RET...");
 						// Replace RET with GOTO which jumps to the label corresponding to its associated JSR
+						if (retLabelMap.get(inList.get(i)) == null) {
+							throw new Error("Verify Error. RET has no matching JSR");
+						}
 						newInst.add(new JumpInsnNode(Opcodes.GOTO, retLabelMap.get(inList.get(i))));
 					}
 					else if (inList.get(i).getOpcode() == Opcodes.ASTORE) {
