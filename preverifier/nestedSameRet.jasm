@@ -1,3 +1,4 @@
+// JSR nested in a subroutine that jumps to the same subroutine as a different JSR
 super public class nestedSameRet
 	version 50:0
 {

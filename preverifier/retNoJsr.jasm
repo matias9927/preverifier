@@ -1,3 +1,4 @@
+// RET instruction with no JSR
 super public class retNoJsr
 	version 50:0
 {

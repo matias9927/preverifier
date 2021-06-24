@@ -1,4 +1,5 @@
-super public class jsr2
+// One JSR and one RET
+super public class helloworldjsr
 	version 50:0
 {
 
@@ -23,4 +24,4 @@ public static varargs Method main:"([Ljava/lang/String;)V"
 		ret 1;
 }
 
-} // end Class jsr2
+} // end Class helloworldjsr

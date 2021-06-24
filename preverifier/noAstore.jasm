@@ -1,3 +1,5 @@
+// JSR and RET with no ASTORE
+// This should naturally fail because RET takes a local variable containing return address, not the top of the stack
 super public class noAstore
 	version 50:0
 {

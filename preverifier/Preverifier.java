@@ -84,11 +84,6 @@ public class Preverifier extends ClassVisitor {
             targetMethods = new HashSet<String>();
 			cr = new ClassReader(bytecode);
 			viewByteCode(cr, bytecode, "JSR");
-			/*int offset = cr.header;	
-			int magic = cr.readInt(0);
-			int minor_version = cr.readUnsignedShort(4);
-			int major_version = cr.readUnsignedShort(6);
-			System.out.printf("Major: %d, Minor: %d, Magic: %x\n", major_version, minor_version, magic);*/
 			cn = replaceOpcodes(cr, bytecode);
         } catch (IOException e) {
             throw new Error("Error reading file", e);
@@ -173,16 +168,20 @@ public class Preverifier extends ClassVisitor {
 	 * Returns ClassNode with altered instruction list
 	 */
 	public static ClassNode replaceOpcodes(ClassReader cr, byte[] bytecode) throws IOException {	
+		// Create classnode to view methods and instructions
 		ClassNode cn = new ClassNode();
 		cr.accept(cn, 0);
+
 		List<MethodNode> mns = cn.methods;
-		System.out.println("Class name: " + cn.name + "\nMethods: " + mns.size());
 		boolean mustExpand = false; // Flag for expanding bytecode when JSRs and RETs overlap
+
+		System.out.println("Class name: " + cn.name + "\nMethods: " + mns.size());
 		for (MethodNode mn : mns) {
 			if (targetMethods.contains(mn.name)) {
-				InsnList inList = mn.instructions;
-				InsnList newInst = new InsnList();
 				System.out.println("Method name: " + mn.name + " Instructions: " + inList.size());
+				InsnList inList = mn.instructions;
+				// New list of instructions that should replace the previous list
+				InsnList newInst = new InsnList();
 				// Return label for RET
 				LabelNode retLb = null;
 				// Map for cloning instructions
@@ -194,13 +193,18 @@ public class Preverifier extends ClassVisitor {
 				for (int i = 0; i < inList.size(); i++) {
 					mustExpand = false;
 
+					// JSR instructions are replaced with GOTO to the same label
+					// A new label is added after the new GOTO that the associated RET will return to 
 					if (inList.get(i).getOpcode() == Opcodes.JSR) {
-						boolean hasRet = false; // Check if JSR has a matching RET
+						// Check if JSR has a matching RET
+						boolean hasRet = false;
 						System.out.println("Replacing JSR...");
+						// Extract the operator from JSR
 						LabelNode lb = ((JumpInsnNode)inList.get(i)).label;
-						
+						// List of all ASTORE instructions in subroutine
+						HashSet<VarInsnNode> astores = new HashSet<VarInsnNode>();
+
 						// Start from the target label and find the next RET instruction
-						HashSet<VarInsnNode> astores = new HashSet<VarInsnNode>(); // List of all ASTORE instructions in subroutine
 						for(int j = inList.indexOf(lb); j < inList.size(); j++) {
 							if (inList.get(j).getOpcode() == Opcodes.RET) {
 								hasRet = true;
@@ -212,15 +216,15 @@ public class Preverifier extends ClassVisitor {
 									retLb = new LabelNode(new Label());
 									retLabelMap.put(inList.get(j), retLb);
 								}
-								// Once RET is found, find and remove associated ASTORE
+								// Once RET is found, find associated ASTORE
 								for (VarInsnNode n : astores) {
 									if (n.var == ((VarInsnNode)inList.get(j)).var) {
-										// Mark the matching ASTORE to be ignored
 										astoreToRemove.add(n);
 									}
 								}
 								break;
 							}
+							// Gather all the ASTORE instructions so you don't have to iterate over the whole subroutine again
 							else if (inList.get(j).getOpcode() == Opcodes.ASTORE) {
 								astores.add((VarInsnNode)inList.get(j));
 							}
@@ -242,8 +246,8 @@ public class Preverifier extends ClassVisitor {
 					else if (inList.get(i).getOpcode() == Opcodes.RET) {
 						System.out.println("Replacing RET...");
 						// Replace RET with GOTO which jumps to the label corresponding to its associated JSR
-						if (retLabelMap.get(inList.get(i)) == null) {
-							throw new Error("Verify Error. RET has no matching JSR");
+						if (!retLabelMap.containsKey(inList.get(i))) {
+							throw new Error("Verifier Error. RET has no matching JSR");
 						}
 						newInst.add(new JumpInsnNode(Opcodes.GOTO, retLabelMap.get(inList.get(i))));
 					}
@@ -259,6 +263,7 @@ public class Preverifier extends ClassVisitor {
 				if (astoreToRemove.isEmpty()) {
 					throw new Error("Verifier Error");
 				}
+				// Replace instructions in the method
 				inList.clear();
 				inList.add(newInst);
 				inList.resetLabels(); // Don't know if this is necessary

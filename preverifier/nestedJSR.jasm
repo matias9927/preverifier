@@ -1,3 +1,4 @@
+// JSR nested in subroutine called by another JSR
 super public class nestedJSR
 	version 50:0
 {

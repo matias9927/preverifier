@@ -1,3 +1,4 @@
+// Two JSR instructions that go to the same subroutine
 super public class sameRet
 	version 50:0
 {
