@@ -54,13 +54,14 @@ import java.util.*;
 import java.nio.file.FileSystems;
 
 /**
- * Class that patches a java class file taken as an argument,
- * replacing all JSR and RET instructions with a valid equivalent
+ * Patches a java class file taken as an argument, replacing all JSR and RET instructions with a valid equivalent
+ * JSR and RET instructions exist in pairs, usually with an ASTORE_X at the top of the subroutine containing
+ * the RET. These instructions are deprecated and must be replaced with valid bytecodes such as GOTO.
  */
 public class Preverifier extends ClassVisitor {
 
 	private static HashSet<String> targetMethods = new HashSet<String>(); // Set containing each method with the desired opcode
-	private static byte[] bytecode;
+	private static byte[] bytecode; // Contents of the class file
 	private static ClassNode cn;
 
 	public static void main(String[] args) {
@@ -141,7 +142,10 @@ public class Preverifier extends ClassVisitor {
 				printer.print(new PrintWriter(sw));
 				printer.getText().clear();
 				System.out.print(sw.toString());
-				if (sw.toString().contains(opcode)) {
+				if (sw.toString().contains(opcode) 
+					|| sw.toString().contains("RET ")
+					|| sw.toString().contains("JSR_W")
+					) {
 					//System.out.println("Found Opcode: "+ opcode);
 					targetMethods.add(mn.name);
 				}
@@ -178,7 +182,6 @@ public class Preverifier extends ClassVisitor {
 		System.out.println("Class name: " + cn.name + "\nMethods: " + mns.size());
 		for (MethodNode mn : mns) {
 			if (targetMethods.contains(mn.name)) {
-				System.out.println("Method name: " + mn.name + " Instructions: " + inList.size());
 				InsnList inList = mn.instructions;
 				// New list of instructions that should replace the previous list
 				InsnList newInst = new InsnList();
@@ -189,13 +192,14 @@ public class Preverifier extends ClassVisitor {
 				// Maps a RET instruction to the label it must return to once converted to GOTO instruction
 				HashMap<AbstractInsnNode, LabelNode> retLabelMap = new HashMap<AbstractInsnNode, LabelNode>();				
 				// Set of ASTORE instructions that must be removed
-				HashSet<VarInsnNode> astoreToRemove = new HashSet<VarInsnNode>(); 				
+				HashSet<VarInsnNode> astoreToRemove = new HashSet<VarInsnNode>();
+				System.out.println("Method name: " + mn.name + " Instructions: " + inList.size()); 				
 				for (int i = 0; i < inList.size(); i++) {
 					mustExpand = false;
 
 					// JSR instructions are replaced with GOTO to the same label
 					// A new label is added after the new GOTO that the associated RET will return to 
-					if (inList.get(i).getOpcode() == Opcodes.JSR) {
+					if (inList.get(i).getOpcode() == Opcodes.JSR || inList.get(i).getOpcode() == 201) {
 						// Check if JSR has a matching RET
 						boolean hasRet = false;
 						System.out.println("Replacing JSR...");

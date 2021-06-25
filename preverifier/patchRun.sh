@@ -1,5 +1,5 @@
 #!/bin/sh
-# Patch the input java class file with Preverifier
+# Patch the input java class file with Preverifier and run
 while getopts r flag; do
 	case $flag in
 		r) 
@@ -24,6 +24,10 @@ else
 	cp $FILE.class $1_backup.class;
 fi
 
+#javac $1.java
+echo **Original Output**
+java $FILE
 #java --add-modules java.base --add-exports java.base/jdk.internal.org.objectweb.asm=ALL-UNNAMED --add-exports java.base/jdk.internal.org.objectweb.asm.util=ALL-UNNAMED --add-exports java.base/jdk.internal.org.objectweb.asm.tree=ALL-UNNAMED HelloWorldPatcher.java $FILE
 java --add-modules java.base --add-exports java.base/jdk.internal.org.objectweb.asm=ALL-UNNAMED --add-exports java.base/jdk.internal.org.objectweb.asm.util=ALL-UNNAMED --add-exports java.base/jdk.internal.org.objectweb.asm.tree=ALL-UNNAMED Preverifier.java $FILE
-echo Done
+echo **Patched Output**
+java $FILE
