@@ -1,0 +1,112 @@
+diff --git a/preverifier/Preverifier.java b/preverifier/Preverifier.java
+index b142c36..743fd96 100644
+--- a/preverifier/Preverifier.java
++++ b/preverifier/Preverifier.java
+@@ -60,7 +60,7 @@ import java.nio.file.FileSystems;
+ public class Preverifier extends ClassVisitor {
+ 
+ 	private static HashSet<String> targetMethods = new HashSet<String>(); // Set containing each method with the desired opcode
+-	private static byte[] bytecode;
++	private static byte[] bytecode; // Contents of the class file
+ 	private static ClassNode cn;
+ 
+ 	public static void main(String[] args) {
+@@ -141,7 +141,10 @@ public class Preverifier extends ClassVisitor {
+ 				printer.print(new PrintWriter(sw));
+ 				printer.getText().clear();
+ 				System.out.print(sw.toString());
+-				if (sw.toString().contains(opcode)) {
++				if (sw.toString().contains(opcode) 
++					|| sw.toString().contains("RET ")
++					|| sw.toString().contains("JSR_W")
++					) {
+ 					//System.out.println("Found Opcode: "+ opcode);
+ 					targetMethods.add(mn.name);
+ 				}
+@@ -178,7 +181,6 @@ public class Preverifier extends ClassVisitor {
+ 		System.out.println("Class name: " + cn.name + "\nMethods: " + mns.size());
+ 		for (MethodNode mn : mns) {
+ 			if (targetMethods.contains(mn.name)) {
+-				System.out.println("Method name: " + mn.name + " Instructions: " + inList.size());
+ 				InsnList inList = mn.instructions;
+ 				// New list of instructions that should replace the previous list
+ 				InsnList newInst = new InsnList();
+@@ -189,13 +191,14 @@ public class Preverifier extends ClassVisitor {
+ 				// Maps a RET instruction to the label it must return to once converted to GOTO instruction
+ 				HashMap<AbstractInsnNode, LabelNode> retLabelMap = new HashMap<AbstractInsnNode, LabelNode>();				
+ 				// Set of ASTORE instructions that must be removed
+-				HashSet<VarInsnNode> astoreToRemove = new HashSet<VarInsnNode>(); 				
++				HashSet<VarInsnNode> astoreToRemove = new HashSet<VarInsnNode>();
++				System.out.println("Method name: " + mn.name + " Instructions: " + inList.size()); 				
+ 				for (int i = 0; i < inList.size(); i++) {
+ 					mustExpand = false;
+ 
+ 					// JSR instructions are replaced with GOTO to the same label
+ 					// A new label is added after the new GOTO that the associated RET will return to 
+-					if (inList.get(i).getOpcode() == Opcodes.JSR) {
++					if (inList.get(i).getOpcode() == Opcodes.JSR || inList.get(i).getOpcode() == Opcodes.JSR_W) {
+ 						// Check if JSR has a matching RET
+ 						boolean hasRet = false;
+ 						System.out.println("Replacing JSR...");
+diff --git a/preverifier/patch.sh b/preverifier/patch.sh
+index 95564fa..8fe2a34 100755
+--- a/preverifier/patch.sh
++++ b/preverifier/patch.sh
+@@ -1,4 +1,5 @@
+ #!/bin/sh
++# Patch the input java class file with Preverifier
+ while getopts r flag; do
+ 	case $flag in
+ 		r) 
+@@ -23,10 +24,6 @@ else
+ 	cp $FILE.class $1_backup.class;
+ fi
+ 
+-#javac $1.java
+-echo **Original Output**
+-java $FILE
+ #java --add-modules java.base --add-exports java.base/jdk.internal.org.objectweb.asm=ALL-UNNAMED --add-exports java.base/jdk.internal.org.objectweb.asm.util=ALL-UNNAMED --add-exports java.base/jdk.internal.org.objectweb.asm.tree=ALL-UNNAMED HelloWorldPatcher.java $FILE
+ java --add-modules java.base --add-exports java.base/jdk.internal.org.objectweb.asm=ALL-UNNAMED --add-exports java.base/jdk.internal.org.objectweb.asm.util=ALL-UNNAMED --add-exports java.base/jdk.internal.org.objectweb.asm.tree=ALL-UNNAMED Preverifier.java $FILE
+-echo **Patched Output**
+-java $FILE
++echo Done
+\ No newline at end of file
+diff --git a/preverifier/patchRun.sh b/preverifier/patchRun.sh
+new file mode 100644
+index 0000000..15d2b44
+--- /dev/null
++++ b/preverifier/patchRun.sh
+@@ -0,0 +1,33 @@
++#!/bin/sh
++# Patch the input java class file with Preverifier and run
++while getopts r flag; do
++	case $flag in
++		r) 
++		  shift $(( OPTIND - 1 ))
++		  ./restore.sh $1;;
++	esac
++done
++FILE=$1
++
++if [ -f "$FILE"_backup.class ] 
++then
++	while true; do
++		read -e -p ""$FILE"_backup already exists, will you overwrite this backup? (y/n) " yn
++		case $yn in
++			y)	cp $FILE.class $1_backup.class;
++				echo "$FILE"_backup.class overwritten;break;;
++			n) echo Backup unchanged;break;;
++			*) echo "Please respond with y or n";;
++		esac
++	done
++else 
++	cp $FILE.class $1_backup.class;
++fi
++
++#javac $1.java
++echo **Original Output**
++java $FILE
++#java --add-modules java.base --add-exports java.base/jdk.internal.org.objectweb.asm=ALL-UNNAMED --add-exports java.base/jdk.internal.org.objectweb.asm.util=ALL-UNNAMED --add-exports java.base/jdk.internal.org.objectweb.asm.tree=ALL-UNNAMED HelloWorldPatcher.java $FILE
++java --add-modules java.base --add-exports java.base/jdk.internal.org.objectweb.asm=ALL-UNNAMED --add-exports java.base/jdk.internal.org.objectweb.asm.util=ALL-UNNAMED --add-exports java.base/jdk.internal.org.objectweb.asm.tree=ALL-UNNAMED Preverifier.java $FILE
++echo **Patched Output**
++java $FILE
