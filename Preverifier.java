@@ -104,6 +104,7 @@ public class Preverifier extends ClassVisitor {
     }
 
 	// Convert inputstream of class file into byte array
+	// Taken from ClassReader
     private static byte[] readStream(final InputStream inputStream, final boolean close)
             throws IOException {
         if (inputStream == null) {
