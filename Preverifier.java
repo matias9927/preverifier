@@ -60,7 +60,7 @@ import java.nio.file.FileSystems;
  */
 public class Preverifier extends ClassVisitor {
 
-	private static HashSet<String> targetMethods = new HashSet<String>(); // Set containing each method with the desired opcode
+	//private static HashSet<String> targetMethods = new HashSet<String>(); // Set containing each method with the desired opcode
 	private static byte[] bytecode; // Contents of the class file
 	private static ClassNode cn;
 
@@ -76,19 +76,13 @@ public class Preverifier extends ClassVisitor {
 		}
 
 		try {
-			filePath = FileSystems.getDefault().getPath(args[0]+".class");
+			filePath = Path.of(args[0]+".class");
+			bytecode = Files.readAllBytes(filePath);
+			cr = new ClassReader(bytecode);
+			cn = replaceOpcodes(cr, bytecode);
 		} catch (Exception e) {
 			throw new Error("File not found", e);
 		}
-        try (FileInputStream fis = new FileInputStream(filePath.toFile())) {
-			bytecode = readStream(fis, true);
-            targetMethods = new HashSet<String>();
-			cr = new ClassReader(bytecode);
-			//viewByteCode(cr, bytecode, "JSR");
-			cn = replaceOpcodes(cr, bytecode);
-        } catch (IOException e) {
-            throw new Error("Error reading file", e);
-        }
         ClassWriter cw = new ClassWriter(cr, ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS);
         cn.accept(cw);
         try {
@@ -103,61 +97,9 @@ public class Preverifier extends ClassVisitor {
         super(api, cw);
     }
 
-	// Convert inputstream of class file into byte array
-	// Taken from ClassReader
-    private static byte[] readStream(final InputStream inputStream, final boolean close)
-            throws IOException {
-        if (inputStream == null) {
-            throw new IOException("Class not found");
-        }
-        try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
-            byte[] data = new byte[4096];
-            int bytesRead;
-            while ((bytesRead = inputStream.read(data, 0, data.length)) != -1) {
-                outputStream.write(data, 0, bytesRead);
-            }
-            outputStream.flush();
-            return outputStream.toByteArray();
-        } finally {
-            if (close) {
-                inputStream.close();
-            }
-        }
-    }
-
-	// got this code from: https://www.programcreek.com/java-api-examples/?project_name=brutusin%2Finstrumentation#
-	// Reads the bytecode of a class and prints it
-	public static void viewByteCode(ClassReader cr, byte[] bytecode, String opcode) throws IOException { // Originally bytes[] bytecode
-		System.out.println();
-		ClassNode cn = new ClassNode();
-		cr.accept(cn, 0);
-		final List<MethodNode> mns = cn.methods;
-		Printer printer = new Textifier();
-		TraceMethodVisitor mp = new TraceMethodVisitor(printer);
-		for (MethodNode mn : mns) {
-			InsnList inList = mn.instructions;
-			//System.out.println(mn.name);
-			for (int i = 0; i < inList.size(); i++) {
-				inList.get(i).accept(mp);
-				StringWriter sw = new StringWriter();
-				printer.print(new PrintWriter(sw));
-				printer.getText().clear();
-				System.out.print(sw.toString());
-				if (sw.toString().contains(opcode) 
-					|| sw.toString().contains("RET ")
-					|| sw.toString().contains("JSR_W")
-					) {
-					//System.out.println("Found Opcode: "+ opcode);
-					targetMethods.add(mn.name);
-				}
-			}
-		}
-		System.out.println();
-	}
-
 	// Builds map for cloning instructions
 	public static Map<LabelNode, LabelNode> cloneLabels(InsnList insns) {
-		HashMap<LabelNode, LabelNode> labelMap = new HashMap<LabelNode, LabelNode>();
+		HashMap<LabelNode, LabelNode> labelMap = new HashMap<>();
 		for (AbstractInsnNode insn = insns.getFirst(); insn != null; insn = insn.getNext()) {
    	    	if (insn.getType() == 8) {
 				labelMap.put((LabelNode) insn, new LabelNode());
@@ -189,25 +131,23 @@ public class Preverifier extends ClassVisitor {
 			// Map for cloning instructions
 			Map<LabelNode, LabelNode> cloneMap = cloneLabels(inList);
 			// Maps a RET instruction to the label it must return to once converted to GOTO instruction
-			HashMap<AbstractInsnNode, LabelNode> retLabelMap = new HashMap<AbstractInsnNode, LabelNode>();				
+			HashMap<AbstractInsnNode, LabelNode> retLabelMap = new HashMap<>();				
 			// Set of ASTORE instructions that must be removed
-			HashSet<VarInsnNode> astoreToRemove = new HashSet<VarInsnNode>();
+			HashSet<VarInsnNode> astoreToRemove = new HashSet<>();
 			boolean hasJSR = false;
 			System.out.println("Method name: " + mn.name + " Instructions: " + inList.size()); 				
 			for (int i = 0; i < inList.size(); i++) {
 				mustExpand = false;
-
 				// JSR instructions are replaced with GOTO to the same label
 				// A new label is added after the new GOTO that the associated RET will return to 
 				if (inList.get(i).getOpcode() == Opcodes.JSR || inList.get(i).getOpcode() == 201) {
-					// Check if JSR has a matching RET
 					hasJSR = true;
 					boolean hasRet = false;
 					System.out.println("Replacing JSR...");
 					// Extract the operator from JSR
 					LabelNode lb = ((JumpInsnNode)inList.get(i)).label;
 					// List of all ASTORE instructions in subroutine
-					HashSet<VarInsnNode> astores = new HashSet<VarInsnNode>();
+					HashSet<VarInsnNode> astores = new HashSet<>();
 
 					// Start from the target label and find the next RET instruction
 					for(int j = inList.indexOf(lb); j < inList.size(); j++) {
