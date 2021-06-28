@@ -2,17 +2,20 @@
 # Patch the input java class file with Preverifier
 # Use -r to restore the class file's backup
 while getopts "er" flag; do
-	case $flag in
+	case "${flag}" in
 		r) 
-		  shift $(( OPTIND - 1 ))
-		  ./restore.sh $1;;
+		  RESTORE=true;;
 		e)
-		  shift $(( OPTIND - 1 ))
-		  EXEC=true
+		  EXEC=true;;
 	esac
 done
+shift $((OPTIND-1))
 
 FILE=$1
+
+if [[ $RESTORE == true ]] ; then
+	./restore.sh $FILE;
+fi
 
 if [ -f "$FILE"_backup.class ] 
 then
@@ -28,9 +31,9 @@ then
 else 
 	cp $FILE.class $1_backup.class;
 fi
-if [ EXEC == true ] ; then
+if [[ $EXEC == true ]] ; then
 	echo **Original Output**
-	java $FILE
+	java -classpath tests $FILE
 	# Patch and print new output
 	java -classpath tests --add-modules java.base --add-exports java.base/jdk.internal.org.objectweb.asm=ALL-UNNAMED --add-exports java.base/jdk.internal.org.objectweb.asm.util=ALL-UNNAMED --add-exports java.base/jdk.internal.org.objectweb.asm.tree=ALL-UNNAMED Preverifier.java $FILE
 	echo **Patched Output**
