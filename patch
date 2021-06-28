@@ -1,44 +1,57 @@
 #!/bin/sh
 # Patch the input java class file with Preverifier
 # Use -r to restore the class file's backup
-while getopts "er" flag; do
-	case "${flag}" in
+CLASSPATH=pwd
+while getopts "erc:" flag; do
+	case ${flag} in
 		r) 
 		  RESTORE=true;;
 		e)
 		  EXEC=true;;
+		c)
+		  CLASSPATH=${OPTARG};;
 	esac
 done
 shift $((OPTIND-1))
 
 FILE=$1
 
+cd $CLASSPATH
 if [[ $RESTORE == true ]] ; then
-	./restore.sh $FILE;
+	# Restore class file from backup
+	echo Restoring $FILE...
+	if [[ -f "$FILE"_backup.class ]]
+	then
+		rm "$FILE".class
+		mv "$FILE"_backup.class "$FILE".class
+	else
+		echo "$FILE" backup not found
+	fi
 fi
 
-if [ -f "$FILE"_backup.class ] 
+if [[ -f "$FILE"_backup.class ]]
 then
 	while true; do
-		read -e -p ""$FILE"_backup already exists, will you overwrite this backup? (y/n) " yn
+		read -e -p ""$FILE"_backup already exists, will you overwrite this backup? (y/n)" yn
 		case $yn in
-			y)	cp $FILE.class $1_backup.class;
+			y)	cp "$FILE".class $1_backup.class;
 				echo "$FILE"_backup.class overwritten;break;;
 			n) echo Backup unchanged;break;;
 			*) echo "Please respond with y or n";;
 		esac
 	done
 else 
-	cp $FILE.class $1_backup.class;
+	cp "$FILE".class "$FILE"_backup.class;
 fi
+cd ..
 if [[ $EXEC == true ]] ; then
 	echo **Original Output**
-	java -classpath tests $FILE
-	# Patch and print new output
-	java -classpath tests --add-modules java.base --add-exports java.base/jdk.internal.org.objectweb.asm=ALL-UNNAMED --add-exports java.base/jdk.internal.org.objectweb.asm.util=ALL-UNNAMED --add-exports java.base/jdk.internal.org.objectweb.asm.tree=ALL-UNNAMED Preverifier.java $FILE
-	echo **Patched Output**
-	java -classpath tests $FILE
-else
-	java -classpath tests --add-modules java.base --add-exports java.base/jdk.internal.org.objectweb.asm=ALL-UNNAMED --add-exports java.base/jdk.internal.org.objectweb.asm.util=ALL-UNNAMED --add-exports java.base/jdk.internal.org.objectweb.asm.tree=ALL-UNNAMED Preverifier.java $FILE	
+	java -classpath $CLASSPATH $FILE
 fi
-echo Done
+
+java --add-modules java.base --add-exports java.base/jdk.internal.org.objectweb.asm=ALL-UNNAMED --add-exports java.base/jdk.internal.org.objectweb.asm.util=ALL-UNNAMED --add-exports java.base/jdk.internal.org.objectweb.asm.tree=ALL-UNNAMED Preverifier.java $CLASSPATH/$FILE	
+
+if [[ $EXEC == true ]] ; then
+	echo **Patched Output**
+	java -classpath $CLASSPATH $FILE
+fi
