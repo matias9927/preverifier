@@ -84,7 +84,7 @@ public class Preverifier extends ClassVisitor {
 			bytecode = readStream(fis, true);
             targetMethods = new HashSet<String>();
 			cr = new ClassReader(bytecode);
-			viewByteCode(cr, bytecode, "JSR");
+			//viewByteCode(cr, bytecode, "JSR");
 			cn = replaceOpcodes(cr, bytecode);
         } catch (IOException e) {
             throw new Error("Error reading file", e);
@@ -136,7 +136,7 @@ public class Preverifier extends ClassVisitor {
 		TraceMethodVisitor mp = new TraceMethodVisitor(printer);
 		for (MethodNode mn : mns) {
 			InsnList inList = mn.instructions;
-			System.out.println(mn.name);
+			//System.out.println(mn.name);
 			for (int i = 0; i < inList.size(); i++) {
 				inList.get(i).accept(mp);
 				StringWriter sw = new StringWriter();
@@ -180,113 +180,109 @@ public class Preverifier extends ClassVisitor {
 		List<MethodNode> mns = cn.methods;
 		boolean mustExpand = false; // Flag for expanding bytecode when JSRs and RETs overlap
 		System.out.println("Class name: " + cn.name + "\nMethods: " + mns.size());
-		boolean containsJSR = true; // loop thru code
-		while (containsJSR) {
-			containsJSR = false;
 		for (MethodNode mn : mns) {
-			if (targetMethods.contains(mn.name)) {
-				InsnList inList = mn.instructions;
-				// New list of instructions that should replace the previous list
-				InsnList newInst = new InsnList();
-				// Return label for RET
-				LabelNode retLb = null;
-				// Map for cloning instructions
-				Map<LabelNode, LabelNode> cloneMap = cloneLabels(inList);
-				// Maps a RET instruction to the label it must return to once converted to GOTO instruction
-				HashMap<AbstractInsnNode, LabelNode> retLabelMap = new HashMap<AbstractInsnNode, LabelNode>();				
-				// Set of ASTORE instructions that must be removed
-				HashSet<VarInsnNode> astoreToRemove = new HashSet<VarInsnNode>();
-				System.out.println("Method name: " + mn.name + " Instructions: " + inList.size()); 				
-				for (int i = 0; i < inList.size(); i++) {
-					mustExpand = false;
+			//if (targetMethods.contains(mn.name)) {
+			InsnList inList = mn.instructions;
+			// New list of instructions that should replace the previous list
+			InsnList newInst = new InsnList();
+			// Return label for RET
+			LabelNode retLb = null;
+			// Map for cloning instructions
+			Map<LabelNode, LabelNode> cloneMap = cloneLabels(inList);
+			// Maps a RET instruction to the label it must return to once converted to GOTO instruction
+			HashMap<AbstractInsnNode, LabelNode> retLabelMap = new HashMap<AbstractInsnNode, LabelNode>();				
+			// Set of ASTORE instructions that must be removed
+			HashSet<VarInsnNode> astoreToRemove = new HashSet<VarInsnNode>();
+			System.out.println("Method name: " + mn.name + " Instructions: " + inList.size()); 				
+			for (int i = 0; i < inList.size(); i++) {
+				mustExpand = false;
 
-					// JSR instructions are replaced with GOTO to the same label
-					// A new label is added after the new GOTO that the associated RET will return to 
-					if (inList.get(i).getOpcode() == Opcodes.JSR || inList.get(i).getOpcode() == 201) {
-						// Check if JSR has a matching RET
-						boolean hasRet = false;
-						System.out.println("Replacing JSR...");
-						// Extract the operator from JSR
-						LabelNode lb = ((JumpInsnNode)inList.get(i)).label;
-						// List of all ASTORE instructions in subroutine
-						HashSet<VarInsnNode> astores = new HashSet<VarInsnNode>();
+				// JSR instructions are replaced with GOTO to the same label
+				// A new label is added after the new GOTO that the associated RET will return to 
+				if (inList.get(i).getOpcode() == Opcodes.JSR || inList.get(i).getOpcode() == 201) {
+					// Check if JSR has a matching RET
+					boolean hasRet = false;
+					System.out.println("Replacing JSR...");
+					// Extract the operator from JSR
+					LabelNode lb = ((JumpInsnNode)inList.get(i)).label;
+					// List of all ASTORE instructions in subroutine
+					HashSet<VarInsnNode> astores = new HashSet<VarInsnNode>();
 
-						// Start from the target label and find the next RET instruction
-						for(int j = inList.indexOf(lb); j < inList.size(); j++) {
-							if (inList.get(j).getOpcode() == Opcodes.RET) {
-								hasRet = true;
-								if (retLabelMap.containsKey(inList.get(j))) {
-									System.out.println("Another JSR points to this RET!");
-									mustExpand = true;
-								}
-								else {
-									retLb = new LabelNode(new Label());
-									retLabelMap.put(inList.get(j), retLb);
-								}
-								// Once RET is found, find associated ASTORE
-								for (VarInsnNode n : astores) {
-									if (n.var == ((VarInsnNode)inList.get(j)).var) {
-										astoreToRemove.add(n);
-									}
-								}
-								break;
+					// Start from the target label and find the next RET instruction
+					for(int j = inList.indexOf(lb); j < inList.size(); j++) {
+						if (inList.get(j).getOpcode() == Opcodes.RET) {
+							hasRet = true;
+							if (retLabelMap.containsKey(inList.get(j))) {
+								System.out.println("Another JSR points to this RET!");
+								mustExpand = true;
 							}
-							// Gather all the ASTORE instructions so you don't have to iterate over the whole subroutine again
-							else if (inList.get(j).getOpcode() == Opcodes.ASTORE) {
-								astores.add((VarInsnNode)inList.get(j));
+							else {
+								retLb = new LabelNode(new Label());
+								retLabelMap.put(inList.get(j), retLb);
 							}
-						}
-						if (!hasRet) {
-							throw new Error("Verifier Error. JSR has no matching RET");
-						}
-						if (mustExpand) {
-							System.out.println("Expanding code...");
-							for (AbstractInsnNode n = inList.get(inList.indexOf(lb)+2); n.getOpcode() != Opcodes.RET; n=n.getNext()) {
-								// If there is a JSR in the code to be copied, replace it with the subroutine it points to
-								if (n.getOpcode() == Opcodes.JSR) {
-									System.out.println("Replacing nested JSR");
-									LabelNode nestedLb = ((JumpInsnNode)n).label;
-									for (AbstractInsnNode m = inList.get(inList.indexOf(nestedLb)+2); m.getOpcode() != Opcodes.RET; m=m.getNext()) {
-										System.out.println("Insn: " + m.getOpcode());
-										newInst.add(m.clone(cloneMap));
-									}
-								}
-								else {
-									newInst.add(n.clone(cloneMap));
+							// Once RET is found, find associated ASTORE
+							for (VarInsnNode n : astores) {
+								if (n.var == ((VarInsnNode)inList.get(j)).var) {
+									astoreToRemove.add(n);
 								}
 							}
+							break;
 						}
-						else {	
-							newInst.add(new JumpInsnNode(Opcodes.GOTO, lb));
-							newInst.add(retLb);
-						}
-					}
-					else if (inList.get(i).getOpcode() == Opcodes.RET) {
-						System.out.println("Replacing RET...");
-						// Replace RET with GOTO which jumps to the label corresponding to its associated JSR
-						if (!retLabelMap.containsKey(inList.get(i))) {
-							throw new Error("Verifier Error. RET has no matching JSR");
-						}
-						newInst.add(new JumpInsnNode(Opcodes.GOTO, retLabelMap.get(inList.get(i))));
-					}
-					else if (inList.get(i).getOpcode() == Opcodes.ASTORE) {
-						if (astoreToRemove.contains(inList.get(i))) {
-							System.out.println("ASTORE removed");
+						// Gather all the ASTORE instructions so you don't have to iterate over the whole subroutine again
+						else if (inList.get(j).getOpcode() == Opcodes.ASTORE) {
+							astores.add((VarInsnNode)inList.get(j));
 						}
 					}
-					else {
-						newInst.add(inList.get(i));
+					if (!hasRet) {
+						throw new Error("Verifier Error. JSR has no matching RET");
+					}
+					if (mustExpand) {
+						System.out.println("Expanding code...");
+						for (AbstractInsnNode n = inList.get(inList.indexOf(lb)+2); n.getOpcode() != Opcodes.RET; n=n.getNext()) {
+							// If there is a JSR in the code to be copied, replace it with the subroutine it points to
+							if (n.getOpcode() == Opcodes.JSR) {
+								System.out.println("Replacing nested JSR");
+								LabelNode nestedLb = ((JumpInsnNode)n).label;
+								for (AbstractInsnNode m = inList.get(inList.indexOf(nestedLb)+2); m.getOpcode() != Opcodes.RET; m=m.getNext()) {
+									System.out.println("Insn: " + m.getOpcode());
+									newInst.add(m.clone(cloneMap));
+								}
+							}
+							else {
+								newInst.add(n.clone(cloneMap));
+							}
+						}
+					}
+					else {	
+						newInst.add(new JumpInsnNode(Opcodes.GOTO, lb));
+						newInst.add(retLb);
 					}
 				}
-				if (astoreToRemove.isEmpty()) {
-					throw new Error("Verifier Error");
+				else if (inList.get(i).getOpcode() == Opcodes.RET) {
+					System.out.println("Replacing RET...");
+					// Replace RET with GOTO which jumps to the label corresponding to its associated JSR
+					if (!retLabelMap.containsKey(inList.get(i))) {
+						throw new Error("Verifier Error. RET has no matching JSR");
+					}
+					newInst.add(new JumpInsnNode(Opcodes.GOTO, retLabelMap.get(inList.get(i))));
 				}
-				// Replace instructions in the method
-				inList.clear();
-				inList.add(newInst);
-				inList.resetLabels(); // Don't know if this is necessary
+				else if (inList.get(i).getOpcode() == Opcodes.ASTORE) {
+					if (astoreToRemove.contains(inList.get(i))) {
+						System.out.println("ASTORE removed");
+					}
+				}
+				else {
+					newInst.add(inList.get(i));
+				}
 			}
-		}} 
+			if (astoreToRemove.isEmpty()) {
+				throw new Error("Verifier Error");
+			}
+			// Replace instructions in the method
+			inList.clear();
+			inList.add(newInst);
+			inList.resetLabels(); // Don't know if this is necessary
+		} 
 		return cn;
     }
 }

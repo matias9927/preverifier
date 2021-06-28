@@ -6,8 +6,12 @@ while getopts r flag; do
 		r) 
 		  shift $(( OPTIND - 1 ))
 		  ./restore.sh $1;;
+		e)
+		  shift $(( OPTIND - 1 ))
+		  EXEC=true
 	esac
 done
+
 FILE=$1
 
 if [ -f "$FILE"_backup.class ] 
@@ -24,6 +28,10 @@ then
 else 
 	cp $FILE.class $1_backup.class;
 fi
-
-java --classpath tests --add-modules java.base --add-exports java.base/jdk.internal.org.objectweb.asm=ALL-UNNAMED --add-exports java.base/jdk.internal.org.objectweb.asm.util=ALL-UNNAMED --add-exports java.base/jdk.internal.org.objectweb.asm.tree=ALL-UNNAMED Preverifier.java $FILE
+if [ EXEC == true ] ; then
+	echo **Original Output**
+	java $FILE
+java -classpath tests --add-modules java.base --add-exports java.base/jdk.internal.org.objectweb.asm=ALL-UNNAMED --add-exports java.base/jdk.internal.org.objectweb.asm.util=ALL-UNNAMED --add-exports java.base/jdk.internal.org.objectweb.asm.tree=ALL-UNNAMED Preverifier.java $FILE
+echo **Patched Output**
+java $FILE
 echo Done
