@@ -1,0 +1,39 @@
+// JSR nested in a subroutine that jumps to the same subroutine as a different JSR
+// There is no setup in which this can pass the verifier. Either Mismatched stack types or Illegal return from subroutine is thrown.
+super public class nestedSameRet
+	version 49:0
+{
+
+public Method "<init>":"()V"
+	stack 1 locals 1
+{
+	aload_0;
+	invokespecial Method java/lang/Object."<init>":"()V";
+	return;
+}
+
+public static varargs Method main:"([Ljava/lang/String;)V"
+	stack 5 locals 3
+{
+		//aconst_null;
+		jsr B;
+		//pop;
+		jsr A;
+		return;
+	A:
+		//jsr B;
+		astore_2;
+		jsr B;
+		getstatic	Field java/lang/System.out:"Ljava/io/PrintStream;";
+		ldc	String	"Hello world!";
+		invokevirtual	Method java/io/PrintStream.println:"(Ljava/lang/String;)V";
+		ret 2;
+	B:
+		astore_1;
+		getstatic	Field java/lang/System.out:"Ljava/io/PrintStream;";
+		ldc String	"Not done yet!";
+		invokevirtual	Method java/io/PrintStream.println:"(Ljava/lang/String;)V";
+		ret 1;
+}
+
+} // end Class nestedSameRet
