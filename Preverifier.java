@@ -181,7 +181,6 @@ public class Preverifier extends ClassVisitor {
 		boolean mustExpand = false; // Flag for expanding bytecode when JSRs and RETs overlap
 		System.out.println("Class name: " + cn.name + "\nMethods: " + mns.size());
 		for (MethodNode mn : mns) {
-			//if (targetMethods.contains(mn.name)) {
 			InsnList inList = mn.instructions;
 			// New list of instructions that should replace the previous list
 			InsnList newInst = new InsnList();
@@ -193,6 +192,7 @@ public class Preverifier extends ClassVisitor {
 			HashMap<AbstractInsnNode, LabelNode> retLabelMap = new HashMap<AbstractInsnNode, LabelNode>();				
 			// Set of ASTORE instructions that must be removed
 			HashSet<VarInsnNode> astoreToRemove = new HashSet<VarInsnNode>();
+			boolean hasJSR = false;
 			System.out.println("Method name: " + mn.name + " Instructions: " + inList.size()); 				
 			for (int i = 0; i < inList.size(); i++) {
 				mustExpand = false;
@@ -201,6 +201,7 @@ public class Preverifier extends ClassVisitor {
 				// A new label is added after the new GOTO that the associated RET will return to 
 				if (inList.get(i).getOpcode() == Opcodes.JSR || inList.get(i).getOpcode() == 201) {
 					// Check if JSR has a matching RET
+					hasJSR = true;
 					boolean hasRet = false;
 					System.out.println("Replacing JSR...");
 					// Extract the operator from JSR
@@ -275,7 +276,7 @@ public class Preverifier extends ClassVisitor {
 					newInst.add(inList.get(i));
 				}
 			}
-			if (astoreToRemove.isEmpty()) {
+			if (astoreToRemove.isEmpty() && hasJSR) {
 				throw new Error("Verifier Error");
 			}
 			// Replace instructions in the method

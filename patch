@@ -1,7 +1,7 @@
 #!/bin/sh
 # Patch the input java class file with Preverifier
 # Use -r to restore the class file's backup
-while getopts r flag; do
+while getopts "er" flag; do
 	case $flag in
 		r) 
 		  shift $(( OPTIND - 1 ))
@@ -31,7 +31,11 @@ fi
 if [ EXEC == true ] ; then
 	echo **Original Output**
 	java $FILE
-java -classpath tests --add-modules java.base --add-exports java.base/jdk.internal.org.objectweb.asm=ALL-UNNAMED --add-exports java.base/jdk.internal.org.objectweb.asm.util=ALL-UNNAMED --add-exports java.base/jdk.internal.org.objectweb.asm.tree=ALL-UNNAMED Preverifier.java $FILE
-echo **Patched Output**
-java $FILE
+	# Patch and print new output
+	java -classpath tests --add-modules java.base --add-exports java.base/jdk.internal.org.objectweb.asm=ALL-UNNAMED --add-exports java.base/jdk.internal.org.objectweb.asm.util=ALL-UNNAMED --add-exports java.base/jdk.internal.org.objectweb.asm.tree=ALL-UNNAMED Preverifier.java $FILE
+	echo **Patched Output**
+	java -classpath tests $FILE
+else
+	java -classpath tests --add-modules java.base --add-exports java.base/jdk.internal.org.objectweb.asm=ALL-UNNAMED --add-exports java.base/jdk.internal.org.objectweb.asm.util=ALL-UNNAMED --add-exports java.base/jdk.internal.org.objectweb.asm.tree=ALL-UNNAMED Preverifier.java $FILE	
+fi
 echo Done
