@@ -37,6 +37,7 @@ import java.lang.invoke.CallSite;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.net.URISyntaxException;
+import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -52,6 +53,7 @@ import java.util.HashSet;
 import java.util.ArrayList;
 import java.util.*;
 import java.nio.file.FileSystems;
+import java.nio.file.LinkOption;
 
 /**
  * Patches a java class file taken as an argument, replacing all JSR and RET instructions with a valid equivalent
@@ -63,16 +65,26 @@ public class Preverifier extends ClassVisitor {
 	//private static HashSet<String> targetMethods = new HashSet<String>(); // Set containing each method with the desired opcode
 	private static byte[] bytecode; // Contents of the class file
 	private static ClassNode cn;
+	private static String fileName;
 
 	public static void main(String[] args) {
         ClassReader cr;
         Path filePath;
-		if (args[0]==null) {
-			System.out.println("Must pass in a class file!");
-			System.exit(-1);
+        for (String s : args) {
+        	System.out.println(s);
+        }
+		if (args.length == 0 || args[0] == null) {
+			System.out.println("Must pass in a class file");
+			System.exit(1);
 		}
 		else {
-			System.out.println("Patching " + args[0] + ".class......");
+			if (args[0].contains("/")) {
+				fileName = args[0].substring(args[0].lastIndexOf("/"));
+			}
+			else {
+				fileName = args[0];
+			}
+			System.out.println("Patching " + fileName + ".class......");
 		}
 
 		try {
@@ -81,15 +93,17 @@ public class Preverifier extends ClassVisitor {
 			cr = new ClassReader(bytecode);
 			cn = replaceOpcodes(cr, bytecode);
 		} catch (Exception e) {
+			System.out.println(fileName+".class");
 			throw new Error("File not found", e);
 		}
         ClassWriter cw = new ClassWriter(cr, ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS);
         cn.accept(cw);
         try {
-            Files.write(filePath, cw.toByteArray(),
-                    StandardOpenOption.WRITE);
+        	Path tmpDir = Files.createTempDirectory("preverifier");
+        	Path tmpFile = Path.of("/tmp/preverifier/" + fileName + ".class");
+        	Files.write(tmpFile, cw.toByteArray(),StandardOpenOption.WRITE);
         } catch (IOException e) {
-            throw new Error(e);
+            throw new Error("Cannot write file", e);
         }
     }
 

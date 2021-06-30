@@ -1,25 +1,22 @@
-public class tryfinally {
-
-	public static int m(boolean b) {
-		int i;
-		try {
-			if (b) {
-				System.out.println("Return 1");
-				return 1;
-			}
-			i = 2;
-			System.out.println("Try\ni=" + i);
-		} finally {
-			if (b) {
-				i = 3;
-				System.out.println("Finally\ni=" + i);
-			}
-		}
-		return i;
+class tryfinallyBytecode {
+	void tryCatchFinally() {
+	    try {
+	        tryItOut();
+	    } catch (Exception e) {
+	        handleExc(e);
+	    } finally {
+	        wrapItUp();
+	    }
 	}
 
+	public void tryItOut() {}
+	public void handleExc(Exception e) {}
+	public void wrapItUp() {}
+}
+
+class tryfinally {
 	public static void main(String[] args) {
-		System.out.println(m(true));
-		//System.out.println(m(false));
+		tryfinallyBytecode b = new tryfinallyBytecode();
+		b.tryCatchFinally();
 	}
 }

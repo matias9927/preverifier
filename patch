@@ -1,7 +1,7 @@
 #!/bin/sh
 # Patch the input java class file with Preverifier
 # Use -r to restore the class file's backup
-CLASSPATH=pwd
+CLASSPATH=$(pwd)
 while getopts "erc:" flag; do
 	case ${flag} in
 		r) 
@@ -17,6 +17,13 @@ shift $((OPTIND-1))
 FILE=$1
 
 cd $CLASSPATH
+if [[ -f "$FILE".class ]]; then
+	echo Found "$FILE"
+else
+	echo "$FILE" not found
+	exit
+fi
+
 if [[ $RESTORE == true ]] ; then
 	# Restore class file from backup
 	echo Restoring $FILE...
