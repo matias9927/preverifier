@@ -1,5 +1,9 @@
-class tryfinallyBytecode {
-	void tryCatchFinally() {
+class tryfinally {
+	public static void main(String[] args) {
+		tryCatchFinally();
+	}
+
+	static void tryCatchFinally() {
 	    try {
 	        tryItOut();
 	    } catch (Exception e) {
@@ -9,14 +13,7 @@ class tryfinallyBytecode {
 	    }
 	}
 
-	public void tryItOut() {}
-	public void handleExc(Exception e) {}
-	public void wrapItUp() {}
-}
-
-class tryfinally {
-	public static void main(String[] args) {
-		tryfinallyBytecode b = new tryfinallyBytecode();
-		b.tryCatchFinally();
-	}
+	public static void tryItOut() {}
+	public static void handleExc(Exception e) {}
+	public static void wrapItUp() {}
 }

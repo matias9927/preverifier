@@ -70,9 +70,6 @@ public class Preverifier extends ClassVisitor {
 	public static void main(String[] args) {
         ClassReader cr;
         Path filePath;
-        for (String s : args) {
-        	System.out.println(s);
-        }
 		if (args.length == 0 || args[0] == null) {
 			System.out.println("Must pass in a class file");
 			System.exit(1);
@@ -96,12 +93,19 @@ public class Preverifier extends ClassVisitor {
 			System.out.println(fileName+".class");
 			throw new Error("File not found", e);
 		}
-        ClassWriter cw = new ClassWriter(cr, ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS);
+        //ClassWriter cw = new ClassWriter(cr, ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS);
+        ClassWriter cw = new ClassWriter(cr, ClassWriter.COMPUTE_MAXS);
         cn.accept(cw);
         try {
-        	Path tmpDir = Files.createTempDirectory("preverifier");
-        	Path tmpFile = Path.of("/tmp/preverifier/" + fileName + ".class");
-        	Files.write(tmpFile, cw.toByteArray(),StandardOpenOption.WRITE);
+        	Path tmpDir;
+        	if (!Files.exists(Path.of("/tmp/preverifier/"))) {
+        		tmpDir = Files.createDirectory(Path.of("/tmp/preverifier/"));	
+        	}
+        	else {
+        		tmpDir = Path.of("/tmp/preverifier/");
+        	}
+        	Path tmpFile = Path.of(tmpDir.toString() + fileName + ".class");
+        	Files.write(tmpFile, cw.toByteArray(), StandardOpenOption.CREATE, StandardOpenOption.WRITE);
         } catch (IOException e) {
             throw new Error("Cannot write file", e);
         }
@@ -137,6 +141,9 @@ public class Preverifier extends ClassVisitor {
 		boolean mustExpand = false; // Flag for expanding bytecode when JSRs and RETs overlap
 		System.out.println("Class name: " + cn.name + "\nMethods: " + mns.size());
 		for (MethodNode mn : mns) {
+			// for (TryCatchBlockNode s : mn.tryCatchBlocks) {
+			// 	System.out.println(s);
+			// }
 			InsnList inList = mn.instructions;
 			// New list of instructions that should replace the previous list
 			InsnList newInst = new InsnList();
@@ -224,6 +231,9 @@ public class Preverifier extends ClassVisitor {
 				else if (inList.get(i).getOpcode() == Opcodes.ASTORE) {
 					if (astoreToRemove.contains(inList.get(i))) {
 						System.out.println("ASTORE removed");
+					}
+					else {
+						newInst.add(inList.get(i));
 					}
 				}
 				else {
