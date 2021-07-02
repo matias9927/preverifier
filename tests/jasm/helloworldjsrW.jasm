@@ -1,5 +1,5 @@
-// Two jsr_w instructions that go to the same subroutine
-super public class sameRetW
+// One JSR_W and one RET
+super public class helloworldjsrW
 	version 50:0
 {
 
@@ -15,21 +15,13 @@ public static varargs Method main:"([Ljava/lang/String;)V"
 	stack 2 locals 2
 {
 		jsr_w A;
-		jsr_w A;
-		jsr_w B;
 		return;
 	A:
 		astore_1;
 		getstatic	Field java/lang/System.out:"Ljava/io/PrintStream;";
-		ldc	String "Hello";
-		invokevirtual	Method java/io/PrintStream.println:"(Ljava/lang/String;)V";
-		ret 1;
-	B:
-		astore_1;
-		getstatic	Field java/lang/System.out:"Ljava/io/PrintStream;";
-		ldc	String "World!";
+		ldc	String "Hello world!";
 		invokevirtual	Method java/io/PrintStream.println:"(Ljava/lang/String;)V";
 		ret 1;
 }
 
-} // end Class sameRetW
+} // end Class helloworldjsrW

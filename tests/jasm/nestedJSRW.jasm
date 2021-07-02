@@ -1,5 +1,5 @@
-// One JSR and one RET
-super public class helloworldjsrW
+// JSR_W nested in subroutine called by another JSR
+super public class nestedJSRW
 	version 50:0
 {
 
@@ -12,16 +12,24 @@ public Method "<init>":"()V"
 }
 
 public static varargs Method main:"([Ljava/lang/String;)V"
-	stack 2 locals 2
+	stack 4 locals 4
 {
 		jsr_w A;
 		return;
 	A:
+		jsr_w B;
 		astore_1;
 		getstatic	Field java/lang/System.out:"Ljava/io/PrintStream;";
 		ldc	String "Hello world!";
 		invokevirtual	Method java/io/PrintStream.println:"(Ljava/lang/String;)V";
 		ret 1;
+	B:
+		astore_1;
+		getstatic Field java/lang/System.out:"Ljava/io/PrintStream;";
+		ldc String "Not done yet!";
+		invokevirtual Method java/io/PrintStream.println:"(Ljava/lang/String;)V";
+		ret 1;
+	
 }
 
-} // end Class helloworldjsrW
+} // end Class nestedJSRW

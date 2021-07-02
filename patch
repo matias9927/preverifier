@@ -1,6 +1,9 @@
 #!/bin/sh
 # Patch the input java class file with Preverifier
 # Use -r to restore the class file's backup
+# Use -e to execute the program before and after patching
+# Use -c to specify the folder the class file is in
+# Ex: ./patch -r -e -c tests helloworldjsr
 CLASSPATH=$(pwd)
 while getopts "erc:" flag; do
 	case ${flag} in
@@ -13,10 +16,9 @@ while getopts "erc:" flag; do
 	esac
 done
 shift $((OPTIND-1))
-
 FILE=$1
-
 cd $CLASSPATH
+
 if [[ -f "$FILE".class ]]; then
 	echo Found "$FILE"
 else
