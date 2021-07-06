@@ -23,14 +23,20 @@
 
  /* Test helloworldjsr */
 
-/*
- * @test
- * @compile helloworldjsr.jasm
- * @run main/othervm -Xverify:all helloworldjsrTest 
- */
+
+@test
+@compile helloworldjsr.jasm
+@run main/othervm -Xverify:all helloworldjsrTest
 
 public class helloworldjsrTest {
-    public static void main(String[] args) {
-         Class newClass = Class.forName("helloworldjsr");
+    public static void main(String[] args) throws Throwable {
+        // ProcessBuilder pb = ProcessTools.createJavaProcessBuilder("helloworldjsr");
+        // OutputAnalyzer output = new OutputAnalyzer(pb.start());
+        // output.shouldContain("Hello world!");
+        try {
+            Class newClass = Class.forName("helloworldjsr");
+        } catch (Exception e) {
+            System.out.println("Class not found");
+        }
     }
 }
