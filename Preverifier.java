@@ -68,6 +68,10 @@ public class Preverifier extends ClassVisitor {
 	private static String fileName;
 
 	public static void main(String[] args) {
+		patch(args);
+	}
+
+	public static void patch(String [] args) {
         ClassReader cr;
         Path filePath;
 		if (args.length == 0 || args[0] == null) {
