@@ -67,9 +67,9 @@ public class Preverifier extends ClassVisitor {
 	private static ClassNode cn;
 	private static String fileName;
 
-	public static void main(String[] args) {
-		patch(args);
-	}
+	// public static void main(String[] args) {
+	// 	patch(args);
+	// }
 
 	public static void patch(String [] args) {
         ClassReader cr;
@@ -100,19 +100,20 @@ public class Preverifier extends ClassVisitor {
         //ClassWriter cw = new ClassWriter(cr, ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS);
         ClassWriter cw = new ClassWriter(cr, ClassWriter.COMPUTE_MAXS);
         cn.accept(cw);
-        try {
-        	Path tmpDir;
-        	if (!Files.exists(Path.of("/tmp/preverifier/"))) {
-        		tmpDir = Files.createDirectory(Path.of("/tmp/preverifier/"));	
-        	}
-        	else {
-        		tmpDir = Path.of("/tmp/preverifier/");
-        	}
-        	Path tmpFile = Path.of(tmpDir.toString() + fileName + ".class");
-        	Files.write(tmpFile, cw.toByteArray(), StandardOpenOption.CREATE, StandardOpenOption.WRITE);
-        } catch (IOException e) {
-            throw new Error("Cannot write file", e);
-        }
+        // try {
+        // 	Path tmpDir;
+        // 	if (!Files.exists(Path.of("/tmp/preverifier/"))) {
+        // 		tmpDir = Files.createDirectory(Path.of("/tmp/preverifier/"));	
+        // 	}
+        // 	else {
+        // 		tmpDir = Path.of("/tmp/preverifier/");
+        // 	}
+        // 	Path tmpFile = Path.of(tmpDir.toString() + fileName + ".class");
+        // 	Files.write(tmpFile, cw.toByteArray(), StandardOpenOption.CREATE, StandardOpenOption.WRITE);
+        // } catch (IOException e) {
+        //     throw new Error("Cannot write file", e);
+        // }
+        return cw.toByteArray();
     }
 
     public Preverifier(int api, ClassWriter cw) {
