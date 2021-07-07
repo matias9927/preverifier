@@ -21,6 +21,8 @@
  * questions.
  */
 
+package java.lang;
+
 import jdk.internal.org.objectweb.asm.ClassReader;
 import jdk.internal.org.objectweb.asm.ClassVisitor;
 import jdk.internal.org.objectweb.asm.ClassWriter;
@@ -71,7 +73,11 @@ public class Preverifier extends ClassVisitor {
 	// 	patch(args);
 	// }
 
-	public static void patch(String [] args) {
+	/**
+	 * Reads class file, locates all JSR/RET instructions, and writes new class file 
+	 * with new valid instructions
+	 */
+	public static byte[] patch(String [] args) {
         ClassReader cr;
         Path filePath;
 		if (args.length == 0 || args[0] == null) {
@@ -116,11 +122,16 @@ public class Preverifier extends ClassVisitor {
         return cw.toByteArray();
     }
 
+    /**
+     * Constructor
+     */ 
     public Preverifier(int api, ClassWriter cw) {
         super(api, cw);
     }
 
-	// Builds map for cloning instructions
+	/**
+	 *  Builds map for cloning instructions
+	 */
 	public static Map<LabelNode, LabelNode> cloneLabels(InsnList insns) {
 		HashMap<LabelNode, LabelNode> labelMap = new HashMap<>();
 		for (AbstractInsnNode insn = insns.getFirst(); insn != null; insn = insn.getNext()) {
@@ -131,7 +142,7 @@ public class Preverifier extends ClassVisitor {
 		return labelMap;
 	}
 
-	/*
+	/**
 	 * Replaces JST and RET opcodes in the class file
 	 * bytecode: byte array containing the contents of the class file
 	 * cr: ClassReader

@@ -62,7 +62,9 @@ if [[ -f /tmp/preverifier/"$FILE".class ]]; then
 	rm /tmp/preverifier/"$FILE".class
 fi
 
-java --add-modules java.base --add-exports java.base/jdk.internal.org.objectweb.asm=ALL-UNNAMED --add-exports java.base/jdk.internal.org.objectweb.asm.util=ALL-UNNAMED --add-exports java.base/jdk.internal.org.objectweb.asm.tree=ALL-UNNAMED Preverifier.java $CLASSPATH/$FILE	
+#java --add-modules java.base --add-exports java.base/jdk.internal.org.objectweb.asm=ALL-UNNAMED --add-exports java.base/jdk.internal.org.objectweb.asm.util=ALL-UNNAMED --add-exports java.base/jdk.internal.org.objectweb.asm.tree=ALL-UNNAMED PreverifierTool.java $CLASSPATH/$FILE	
+#javac --add-modules java.base --add-exports java.base/jdk.internal.org.objectweb.asm=ALL-UNNAMED --add-exports java.base/jdk.internal.org.objectweb.asm.util=ALL-UNNAMED --add-exports java.base/jdk.internal.org.objectweb.asm.tree=ALL-UNNAMED Preverifier.java
+java --add-modules java.base --add-exports java.base/jdk.internal.org.objectweb.asm=ALL-UNNAMED --add-exports java.base/jdk.internal.org.objectweb.asm.util=ALL-UNNAMED --add-exports java.base/jdk.internal.org.objectweb.asm.tree=ALL-UNNAMED --add-exports java.base/jdk.internal.vm=ALL-UNNAMED PreverifierTool.java $CLASSPATH/$FILE
 
 if [[ $EXEC == true ]] ; then
 	echo **Patched Output**
