@@ -21,7 +21,7 @@
  * questions.
  */
 
-package java.lang;
+package jdk.internal.vm;
 
 import jdk.internal.org.objectweb.asm.ClassReader;
 import jdk.internal.org.objectweb.asm.ClassVisitor;
